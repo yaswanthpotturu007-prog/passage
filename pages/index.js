@@ -31,15 +31,107 @@ const DOC_SUGGESTIONS = [
   'Diplomatic/official passport endorsement',
 ];
 
+const PURPOSES = ['Tourist', 'Business', 'Transit', 'Family visit'];
+const ENTRY_COUNTS = ['Single entry', 'Multiple entry'];
+const LEAVING_AIRPORT_OPTIONS = ['No, staying airside', 'Yes, leaving the airport'];
+const LAYOVER_DURATIONS = ['Under 24 hours', '24+ hours'];
+
+function ResultCard({ passportCountry, res }) {
+  const [voted, setVoted] = useState(null);
+
+  async function sendVote(vote) {
+    setVoted(vote);
+    try {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          passportCountry,
+          destinationLabel: res.result?.destination_label,
+          requirementText: res.result?.requirement,
+          vote,
+        }),
+      });
+    } catch (e) { /* fail silently - feedback is best-effort */ }
+  }
+
+  if (!res.found) {
+    return <div style={{ padding: 24, border: '1px solid #ddd', borderRadius: 6, marginBottom: 20 }}><p>{res.message}</p></div>;
+  }
+
+  return (
+    <div style={{ padding: 24, border: '1px solid #ddd', borderRadius: 6, marginBottom: 20 }}>
+      <h2 style={{ marginTop: 0 }}>{res.result.destination_label}</h2>
+      <p><strong>Requirement:</strong> {res.result.requirement}</p>
+      <p><strong>Fee:</strong> {res.result.fee}</p>
+      <p><strong>Max stay:</strong> {res.result.max_stay}</p>
+      <p><strong>Source:</strong> {res.result.source_name}</p>
+
+      {res.unlockedBy ? (
+        <p style={{ color: '#3C5A44' }}>✓ Based on your {res.unlockedBy}</p>
+      ) : res.baselineExhaustive ? (
+        <p style={{ color: '#3C5A44' }}>✓ Confirmed: no document changes this — passport nationality decides here</p>
+      ) : (
+        <p style={{ color: '#B23A2F', fontWeight: 500 }}>
+          ⚠ {res.source === 'live_search' ? 'Auto-researched just now' : 'Not yet fully verified'} — confirm with an official source before booking.
+        </p>
+      )}
+
+      <p style={{ fontSize: 12, color: '#888' }}>
+        Confidence: {res.result.confidence} · Last checked: {res.result.verified_date}
+        {res.source === 'live_search' && ' · Found via live search'}
+      </p>
+
+      {[res.documentWarning, res.passportWarning, res.purposeWarning, res.entryWarning, res.travelDateNote]
+        .filter(Boolean)
+        .map((msg, i) => (
+          <p key={i} style={{ marginTop: 10, padding: 10, background: '#FCEFEA', border: '1px solid #E8A98F', borderRadius: 4, color: '#A63A2E', fontSize: 13 }}>
+            ⚠ {msg}
+          </p>
+        ))}
+
+      <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 12, color: '#888' }}>Was this accurate?</span>
+        {voted ? (
+          <span style={{ fontSize: 12, color: '#3C5A44' }}>Thanks for the feedback!</span>
+        ) : (
+          <>
+            <button onClick={() => sendVote('up')} style={{ padding: '4px 10px', cursor: 'pointer' }}>👍</button>
+            <button onClick={() => sendVote('down')} style={{ padding: '4px 10px', cursor: 'pointer' }}>👎</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [passportCountry, setPassportCountry] = useState('India');
-  const [destination, setDestination] = useState(DESTINATIONS[0]);
-  const [docRows, setDocRows] = useState([{ type: 'Canadian PR card', custom: '' }]);
-  const [result, setResult] = useState(null);
+  const [passportExpiry, setPassportExpiry] = useState('');
+  const [destinations, setDestinations] = useState([DESTINATIONS[0]]);
+  const [docRows, setDocRows] = useState([{ type: 'Canadian PR card', custom: '', expiry: '' }]);
+  const [purpose, setPurpose] = useState('Tourist');
+  const [entryCount, setEntryCount] = useState('Single entry');
+  const [travelDate, setTravelDate] = useState('');
+  const [leavingAirport, setLeavingAirport] = useState(LEAVING_AIRPORT_OPTIONS[0]);
+  const [layoverDuration, setLayoverDuration] = useState(LAYOVER_DURATIONS[0]);
+  const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  function addDestination() {
+    setDestinations([...destinations, DESTINATIONS[0]]);
+  }
+  function removeDestination(index) {
+    setDestinations(destinations.filter((_, i) => i !== index));
+  }
+  function updateDestination(index, value) {
+    const updated = [...destinations];
+    updated[index] = value;
+    setDestinations(updated);
+  }
+
   function addDocRow() {
-    setDocRows([...docRows, { type: DOC_TYPES[0], custom: '' }]);
+    setDocRows([...docRows, { type: DOC_TYPES[0], custom: '', expiry: '' }]);
   }
   function removeDocRow(index) {
     setDocRows(docRows.filter((_, i) => i !== index));
@@ -54,134 +146,25 @@ export default function Home() {
     updated[index] = { ...updated[index], custom: value };
     setDocRows(updated);
   }
+  function updateDocRowExpiry(index, value) {
+    const updated = [...docRows];
+    updated[index] = { ...updated[index], expiry: value };
+    setDocRows(updated);
+  }
   function resolvedDocs() {
     return docRows
-      .map((row) => (row.type === 'Other (type it in)' ? row.custom.trim() : row.type))
-      .filter((v) => v.length > 0);
+      .map((row) => ({
+        name: row.type === 'Other (type it in)' ? row.custom.trim() : row.type,
+        expiry: row.expiry || null,
+      }))
+      .filter((d) => d.name.length > 0);
   }
 
   async function handleCheck() {
     setLoading(true);
-    setResult(null);
+    setResults(null);
     try {
-      const res = await fetch('/api/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passportCountry, destination, documents: resolvedDocs() }),
-      });
-      const data = await res.json();
-      setResult(data);
-    } catch (err) {
-      setResult({ found: false, message: 'Something went wrong. Try again.' });
-    }
-    setLoading(false);
-  }
-
-  return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px', fontFamily: 'system-ui, sans-serif' }}>
-      <h1 style={{ fontSize: 34, marginBottom: 8 }}>Passage</h1>
-      <p style={{ color: '#555', marginBottom: 36 }}>
-        Your passport isn&apos;t the whole story. Tell us what else you hold.
-      </p>
-
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
-          Citizenship (passport held)
-        </label>
-        <select value={passportCountry} onChange={(e) => setPassportCountry(e.target.value)} style={{ width: '100%', padding: 10 }}>
-          {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
-
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
-          Other visas, residency or permits you hold
-        </label>
-        {docRows.map((row, i) => (
-          <div key={i} style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <select value={row.type} onChange={(e) => updateDocRowType(i, e.target.value)} style={{ flex: 1, padding: 10 }}>
-                {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <button onClick={() => removeDocRow(i)} style={{ padding: '0 14px' }}>×</button>
-            </div>
-            {row.type === 'Other (type it in)' && (
-              <div style={{ marginTop: 6 }}>
-                <input
-                  type="text"
-                  list="doc-suggestions"
-                  placeholder="e.g. Australian PR, UAE residence visa, Singapore Employment Pass..."
-                  value={row.custom}
-                  onChange={(e) => updateDocRowCustom(i, e.target.value)}
-                  style={{ width: '100%', padding: 10, border: '1px solid #ccc', borderRadius: 4 }}
-                />
-                <p style={{ fontSize: 11, color: '#888', margin: '4px 0 0' }}>
-                  Start typing for suggestions, or enter anything not listed.
-                </p>
-              </div>
-            )}
-          </div>
-        ))}
-        <datalist id="doc-suggestions">
-          {DOC_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
-        </datalist>
-        <button onClick={addDocRow} style={{ marginTop: 4, padding: '8px 14px' }}>
-          + Add another document
-        </button>
-      </div>
-
-      <div style={{ marginBottom: 28 }}>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
-          Where are you going
-        </label>
-        <select value={destination} onChange={(e) => setDestination(e.target.value)} style={{ width: '100%', padding: 10 }}>
-          {DESTINATIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
-
-      <button
-        onClick={handleCheck}
-        disabled={loading}
-        style={{ background: '#A63A2E', color: 'white', border: 'none', padding: '14px 28px', borderRadius: 4, fontSize: 15, cursor: 'pointer' }}
-      >
-        {loading ? 'Checking…' : 'Stamp my check'}
-      </button>
-
-      {result && (
-        <div style={{ marginTop: 40, padding: 24, border: '1px solid #ddd', borderRadius: 6 }}>
-          {!result.found ? (
-            <p>{result.message}</p>
-          ) : (
-            <>
-              <h2 style={{ marginTop: 0 }}>{result.result.destination_label}</h2>
-              <p><strong>Requirement:</strong> {result.result.requirement}</p>
-              <p><strong>Fee:</strong> {result.result.fee}</p>
-              <p><strong>Max stay:</strong> {result.result.max_stay}</p>
-              <p><strong>Source:</strong> {result.result.source_name}</p>
-
-              {result.unlockedBy ? (
-                <p style={{ color: '#3C5A44' }}>✓ Based on your {result.unlockedBy}</p>
-              ) : result.baselineExhaustive ? (
-                <p style={{ color: '#3C5A44' }}>✓ Confirmed: no document changes this — passport nationality decides here</p>
-              ) : (
-                <p style={{ color: '#B23A2F', fontWeight: 500 }}>
-                  ⚠ {result.source === 'live_search' ? 'Auto-researched just now' : 'Not yet fully verified'} — confirm with an official source before booking.
-                </p>
-              )}
-
-              <p style={{ fontSize: 12, color: '#888' }}>
-                Confidence: {result.result.confidence} · Last checked: {result.result.verified_date}
-                {result.source === 'live_search' && ' · Found via live search'}
-              </p>
-            </>
-          )}
-        </div>
-      )}
-
-      <p style={{ marginTop: 48, fontSize: 12, color: '#999' }}>
-        Verified destinations (UAE, UK, Schengen) use manually checked data. Everything else is researched live
-        when you search it. Always confirm with official government sources before booking travel.
-      </p>
-    </div>
-  );
-}
+      const promises = destinations.map((destination) =>
+        fetch('/api/check', {
+          method: 'POST',
+          headers:
