@@ -36,6 +36,17 @@ const ENTRY_COUNTS = ['Single entry', 'Multiple entry'];
 const LEAVING_AIRPORT_OPTIONS = ['No, staying airside', 'Yes, leaving the airport'];
 const LAYOVER_DURATIONS = ['Under 24 hours', '24+ hours'];
 
+function newDestinationEntry() {
+  return {
+    destination: DESTINATIONS[0],
+    purpose: 'Tourist',
+    entryCount: 'Single entry',
+    travelDate: '',
+    leavingAirport: LEAVING_AIRPORT_OPTIONS[0],
+    layoverDuration: LAYOVER_DURATIONS[0],
+  };
+}
+
 function ResultCard({ passportCountry, res }) {
   const [voted, setVoted] = useState(null);
 
@@ -108,26 +119,21 @@ function ResultCard({ passportCountry, res }) {
 export default function Home() {
   const [passportCountry, setPassportCountry] = useState('India');
   const [passportExpiry, setPassportExpiry] = useState('');
-  const [destinations, setDestinations] = useState([DESTINATIONS[0]]);
+  const [destEntries, setDestEntries] = useState([newDestinationEntry()]);
   const [docRows, setDocRows] = useState([{ type: 'Canadian PR card', custom: '', expiry: '' }]);
-  const [purpose, setPurpose] = useState('Tourist');
-  const [entryCount, setEntryCount] = useState('Single entry');
-  const [travelDate, setTravelDate] = useState('');
-  const [leavingAirport, setLeavingAirport] = useState(LEAVING_AIRPORT_OPTIONS[0]);
-  const [layoverDuration, setLayoverDuration] = useState(LAYOVER_DURATIONS[0]);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
 
   function addDestination() {
-    setDestinations([...destinations, DESTINATIONS[0]]);
+    setDestEntries([...destEntries, newDestinationEntry()]);
   }
   function removeDestination(index) {
-    setDestinations(destinations.filter((_, i) => i !== index));
+    setDestEntries(destEntries.filter((_, i) => i !== index));
   }
-  function updateDestination(index, value) {
-    const updated = [...destinations];
-    updated[index] = value;
-    setDestinations(updated);
+  function updateDestField(index, field, value) {
+    const updated = [...destEntries];
+    updated[index] = { ...updated[index], [field]: value };
+    setDestEntries(updated);
   }
 
   function addDocRow() {
@@ -164,20 +170,20 @@ export default function Home() {
     setLoading(true);
     setResults(null);
     try {
-      const promises = destinations.map((destination) =>
+      const promises = destEntries.map((entry) =>
         fetch('/api/check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             passportCountry,
             passportExpiry: passportExpiry || null,
-            destination,
+            destination: entry.destination,
             documents: resolvedDocs(),
-            purpose,
-            entryCount,
-            travelDate: travelDate || null,
-            leavingAirport: purpose === 'Transit' ? leavingAirport : null,
-            layoverDuration: purpose === 'Transit' ? layoverDuration : null,
+            purpose: entry.purpose,
+            entryCount: entry.entryCount,
+            travelDate: entry.travelDate || null,
+            leavingAirport: entry.purpose === 'Transit' ? entry.leavingAirport : null,
+            layoverDuration: entry.purpose === 'Transit' ? entry.layoverDuration : null,
           }),
         }).then((r) => r.json())
       );
@@ -252,65 +258,72 @@ export default function Home() {
       </div>
 
       <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
-          Where are you going
+        <label style={{ display: 'block', fontSize: 13, marginBottom: 10, color: '#666' }}>
+          Your trip — each stop can have its own purpose (e.g. transit through one, tourism in another)
         </label>
-        {destinations.map((dest, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <select value={dest} onChange={(e) => updateDestination(i, e.target.value)} style={{ flex: 1, padding: 10 }}>
-              {DESTINATIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <button onClick={() => removeDestination(i)} style={{ padding: '0 14px' }}>×</button>
+
+        {destEntries.map((entry, i) => (
+          <div key={i} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 16, marginBottom: 12, background: '#FAFAF8' }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+              <select
+                value={entry.destination}
+                onChange={(e) => updateDestField(i, 'destination', e.target.value)}
+                style={{ flex: 1, padding: 10, fontWeight: 600 }}
+              >
+                {DESTINATIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              {destEntries.length > 1 && (
+                <button onClick={() => removeDestination(i)} style={{ padding: '0 14px' }}>×</button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#888' }}>Purpose</label>
+                <select value={entry.purpose} onChange={(e) => updateDestField(i, 'purpose', e.target.value)} style={{ width: '100%', padding: 8 }}>
+                  {PURPOSES.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#888' }}>Entry type</label>
+                <select value={entry.entryCount} onChange={(e) => updateDestField(i, 'entryCount', e.target.value)} style={{ width: '100%', padding: 8 }}>
+                  {ENTRY_COUNTS.map((e2) => <option key={e2} value={e2}>{e2}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#888' }}>Date (optional)</label>
+                <input type="date" value={entry.travelDate} onChange={(e) => updateDestField(i, 'travelDate', e.target.value)}
+                  style={{ width: '100%', padding: 7, border: '1px solid #ccc', borderRadius: 4 }} />
+              </div>
+            </div>
+
+            {entry.purpose === 'Transit' && (
+              <div style={{ marginTop: 12, padding: 12, background: '#FFF6D9', border: '1px dashed #D4B84A', borderRadius: 4 }}>
+                <p style={{ fontSize: 11, color: '#7A6A1F', marginTop: 0, marginBottom: 8 }}>
+                  Transit rules are always shown as auto-researched, even for destinations we&apos;ve otherwise verified.
+                </p>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#666' }}>Leaving the airport?</label>
+                    <select value={entry.leavingAirport} onChange={(e) => updateDestField(i, 'leavingAirport', e.target.value)} style={{ width: '100%', padding: 8 }}>
+                      {LEAVING_AIRPORT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 140 }}>
+                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#666' }}>Layover duration</label>
+                    <select value={entry.layoverDuration} onChange={(e) => updateDestField(i, 'layoverDuration', e.target.value)} style={{ width: '100%', padding: 8 }}>
+                      {LAYOVER_DURATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ))}
         <button onClick={addDestination} style={{ marginTop: 4, padding: '8px 14px' }}>
-          + Add another destination
+          + Add another stop
         </button>
       </div>
-
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>Purpose of travel</label>
-          <select value={purpose} onChange={(e) => setPurpose(e.target.value)} style={{ width: '100%', padding: 10 }}>
-            {PURPOSES.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </div>
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>Entry type</label>
-          <select value={entryCount} onChange={(e) => setEntryCount(e.target.value)} style={{ width: '100%', padding: 10 }}>
-            {ENTRY_COUNTS.map((e) => <option key={e} value={e}>{e}</option>)}
-          </select>
-        </div>
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>Travel date (optional)</label>
-          <input type="date" value={travelDate} onChange={(e) => setTravelDate(e.target.value)}
-            style={{ width: '100%', padding: 9, border: '1px solid #ccc', borderRadius: 4 }} />
-        </div>
-      </div>
-
-      {purpose === 'Transit' && (
-        <div style={{ marginBottom: 24, padding: 16, background: '#FFF6D9', border: '1px dashed #D4B84A', borderRadius: 4 }}>
-          <p style={{ fontSize: 12, color: '#7A6A1F', marginTop: 0 }}>
-            Transit rules are always shown as auto-researched, even for destinations we've otherwise verified.
-          </p>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
-                Are you leaving the airport during your layover?
-              </label>
-              <select value={leavingAirport} onChange={(e) => setLeavingAirport(e.target.value)} style={{ width: '100%', padding: 10 }}>
-                {LEAVING_AIRPORT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
-            <div style={{ flex: 1, minWidth: 160 }}>
-              <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>Layover duration</label>
-              <select value={layoverDuration} onChange={(e) => setLayoverDuration(e.target.value)} style={{ width: '100%', padding: 10 }}>
-                {LAYOVER_DURATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
 
       <button
         onClick={handleCheck}
