@@ -167,4 +167,171 @@ export default function Home() {
       const promises = destinations.map((destination) =>
         fetch('/api/check', {
           method: 'POST',
-          headers:
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            passportCountry,
+            passportExpiry: passportExpiry || null,
+            destination,
+            documents: resolvedDocs(),
+            purpose,
+            entryCount,
+            travelDate: travelDate || null,
+            leavingAirport: purpose === 'Transit' ? leavingAirport : null,
+            layoverDuration: purpose === 'Transit' ? layoverDuration : null,
+          }),
+        }).then((r) => r.json())
+      );
+      const allResults = await Promise.all(promises);
+      setResults(allResults);
+    } catch (err) {
+      setResults([{ found: false, message: 'Something went wrong. Try again.' }]);
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px', fontFamily: 'system-ui, sans-serif' }}>
+      <h1 style={{ fontSize: 34, marginBottom: 8 }}>Passage</h1>
+      <p style={{ color: '#555', marginBottom: 36 }}>
+        Your passport isn&apos;t the whole story. Tell us what else you hold.
+      </p>
+
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
+          Citizenship (passport held)
+        </label>
+        <select value={passportCountry} onChange={(e) => setPassportCountry(e.target.value)} style={{ width: '100%', padding: 10 }}>
+          {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <div style={{ marginTop: 8 }}>
+          <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#888' }}>
+            Passport expiry date (optional)
+          </label>
+          <input type="date" value={passportExpiry} onChange={(e) => setPassportExpiry(e.target.value)}
+            style={{ padding: 8, border: '1px solid #ccc', borderRadius: 4 }} />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
+          Other visas, residency or permits you hold
+        </label>
+        {docRows.map((row, i) => (
+          <div key={i} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select value={row.type} onChange={(e) => updateDocRowType(i, e.target.value)} style={{ flex: 1, padding: 10 }}>
+                {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <button onClick={() => removeDocRow(i)} style={{ padding: '0 14px' }}>×</button>
+            </div>
+            {row.type === 'Other (type it in)' && (
+              <div style={{ marginTop: 6 }}>
+                <input
+                  type="text"
+                  list="doc-suggestions"
+                  placeholder="e.g. Australian PR, UAE residence visa..."
+                  value={row.custom}
+                  onChange={(e) => updateDocRowCustom(i, e.target.value)}
+                  style={{ width: '100%', padding: 10, border: '1px solid #ccc', borderRadius: 4 }}
+                />
+              </div>
+            )}
+            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ fontSize: 11, color: '#888' }}>Expiry (optional):</label>
+              <input type="date" value={row.expiry} onChange={(e) => updateDocRowExpiry(i, e.target.value)}
+                style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4, fontSize: 13 }} />
+            </div>
+          </div>
+        ))}
+        <datalist id="doc-suggestions">
+          {DOC_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
+        </datalist>
+        <button onClick={addDocRow} style={{ marginTop: 4, padding: '8px 14px' }}>
+          + Add another document
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
+          Where are you going
+        </label>
+        {destinations.map((dest, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <select value={dest} onChange={(e) => updateDestination(i, e.target.value)} style={{ flex: 1, padding: 10 }}>
+              {DESTINATIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button onClick={() => removeDestination(i)} style={{ padding: '0 14px' }}>×</button>
+          </div>
+        ))}
+        <button onClick={addDestination} style={{ marginTop: 4, padding: '8px 14px' }}>
+          + Add another destination
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>Purpose of travel</label>
+          <select value={purpose} onChange={(e) => setPurpose(e.target.value)} style={{ width: '100%', padding: 10 }}>
+            {PURPOSES.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>Entry type</label>
+          <select value={entryCount} onChange={(e) => setEntryCount(e.target.value)} style={{ width: '100%', padding: 10 }}>
+            {ENTRY_COUNTS.map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>Travel date (optional)</label>
+          <input type="date" value={travelDate} onChange={(e) => setTravelDate(e.target.value)}
+            style={{ width: '100%', padding: 9, border: '1px solid #ccc', borderRadius: 4 }} />
+        </div>
+      </div>
+
+      {purpose === 'Transit' && (
+        <div style={{ marginBottom: 24, padding: 16, background: '#FFF6D9', border: '1px dashed #D4B84A', borderRadius: 4 }}>
+          <p style={{ fontSize: 12, color: '#7A6A1F', marginTop: 0 }}>
+            Transit rules are always shown as auto-researched, even for destinations we've otherwise verified.
+          </p>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
+                Are you leaving the airport during your layover?
+              </label>
+              <select value={leavingAirport} onChange={(e) => setLeavingAirport(e.target.value)} style={{ width: '100%', padding: 10 }}>
+                {LEAVING_AIRPORT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>Layover duration</label>
+              <select value={layoverDuration} onChange={(e) => setLayoverDuration(e.target.value)} style={{ width: '100%', padding: 10 }}>
+                {LAYOVER_DURATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={handleCheck}
+        disabled={loading}
+        style={{ background: '#A63A2E', color: 'white', border: 'none', padding: '14px 28px', borderRadius: 4, fontSize: 15, cursor: 'pointer' }}
+      >
+        {loading ? 'Checking…' : 'Stamp my check'}
+      </button>
+
+      {results && (
+        <div style={{ marginTop: 40 }}>
+          {results.map((res, i) => (
+            <ResultCard key={i} passportCountry={passportCountry} res={res} />
+          ))}
+        </div>
+      )}
+
+      <p style={{ marginTop: 48, fontSize: 12, color: '#999' }}>
+        Verified destinations (UAE, UK, Schengen) use manually checked data assuming tourist, single-entry travel.
+        Everything else is researched live when you search it. Always confirm with official government sources before booking travel.
+      </p>
+    </div>
+  );
+}
