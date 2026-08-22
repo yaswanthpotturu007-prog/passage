@@ -1,3 +1,6 @@
+// Handles ONE destination per call. The frontend calls this once per
+// destination when the user searches multiple destinations at once.
+
 import { supabase } from '../../lib/supabaseClient';
 import { DESTINATION_KEY_MAP } from '../../lib/countries';
 
@@ -11,11 +14,11 @@ export default async function handler(req, res) {
     passportExpiry,
     destination,
     documents,
-    purpose,
-    entryCount,
-    travelDate,
-    leavingAirport,
-    layoverDuration,
+    purpose,          // e.g. "Tourist", "Business", "Transit", "Family visit"
+    entryCount,       // "Single entry" or "Multiple entry"
+    travelDate,       // optional date string
+    leavingAirport,   // "Yes" or "No" - only relevant when purpose is Transit
+    layoverDuration,  // "Under 24 hours" or "24+ hours" - only relevant when purpose is Transit
   } = req.body;
 
   if (!passportCountry || !destination) {
@@ -24,6 +27,11 @@ export default async function handler(req, res) {
 
   const destinationKey = DESTINATION_KEY_MAP[destination] || destination.toLowerCase();
 
+  // TRANSIT is a genuinely different question from entry rules - even our
+  // "verified" UAE/UK/Schengen data has never been checked for transit
+  // specifically. So transit ALWAYS goes to live search, never the verified
+  // database, and its result is never cached as a general destination answer
+  // (that would risk polluting the entry-rule cache with transit-only info).
   if (purpose === 'Transit') {
     try {
       const liveResult = await liveSearch(passportCountry, destination, documents, purpose, entryCount, leavingAirport, layoverDuration);
@@ -72,6 +80,7 @@ export default async function handler(req, res) {
     travelDateNote = "Your trip is more than 3 months away. Visa rules can change (as they have for several countries in 2026) - worth re-checking closer to your travel date.";
   }
 
+  // ---------- STEP 1: check the verified/cached database ----------
   const { data, error } = await supabase
     .from('visa_rules')
     .select('*')
@@ -105,6 +114,9 @@ export default async function handler(req, res) {
     if (unlockMatch) { best = unlockMatch.rule; unlockedBy = unlockMatch.doc.name; }
     else if (excludeMatch) { best = excludeMatch.rule; unlockedBy = excludeMatch.doc.name; }
 
+    // Our verified UAE/UK/Schengen data assumes: tourist purpose, single entry.
+    // If the user selected something else, flag it honestly rather than
+    // silently applying tourist/single-entry rules to a different situation.
     let purposeWarning = null;
     if (purpose && purpose !== 'Tourist') {
       purposeWarning = `This answer is based on tourist travel. You selected "${purpose}" - business, transit, and family-visit trips can have different visa categories or requirements. Confirm the correct category with an official source.`;
@@ -129,6 +141,7 @@ export default async function handler(req, res) {
     });
   }
 
+  // ---------- STEP 2: live search fallback ----------
   try {
     const liveResult = await liveSearch(passportCountry, destination, documents, purpose, entryCount);
 
@@ -182,7 +195,7 @@ async function liveSearch(passportCountry, destination, documents, purpose, entr
   const purposeText = purpose ? `Purpose of travel: ${purpose}.` : '';
   const entryText = entryCount ? `Entry type needed: ${entryCount}.` : '';
   const transitText = purpose === 'Transit'
-    ? `This is a TRANSIT/LAYOVER, not a full entry. ${leavingAirport === 'Yes' ? 'They WILL leave the airport during the layover.' : 'They will stay airside and NOT leave the airport.'} Layover duration: ${layoverDuration || 'unspecified'}. Research transit-specific visa rules, which are often different from full entry rules (e.g. many countries allow visa-free airside transit under a certain number of hours even when a full entry visa would be required).`
+    ? `This is a TRANSIT/LAYOVER, not a full entry. ${leavingAirport && leavingAirport.startsWith('Yes') ? 'They WILL leave the airport during the layover.' : 'They will stay airside and NOT leave the airport.'} Layover duration: ${layoverDuration || 'unspecified'}. Research transit-specific visa rules, which are often different from full entry rules (e.g. many countries allow visa-free airside transit under a certain number of hours even when a full entry visa would be required).`
     : '';
 
   const prompt = `A traveler holds a ${passportCountry} passport and wants to visit ${destination}. ${docsText} ${purposeText} ${entryText} ${transitText}
