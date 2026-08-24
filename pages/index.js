@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Head from 'next/head';
-import { COUNTRIES, DESTINATIONS } from '../lib/countries';
+import { COUNTRIES } from '../lib/countries';
 
 const DOC_TYPES = [
   'Canadian PR card',
@@ -54,8 +54,7 @@ const LAYOVER_DURATIONS = ['Under 24 hours', '24+ hours'];
 
 function newDestinationEntry() {
   return {
-    destination: DESTINATIONS[0],
-    customDestination: '',
+    destination: 'United Arab Emirates',
     purpose: 'Tourist',
     entryCount: 'Single entry',
     travelDate: '',
@@ -190,7 +189,7 @@ export default function Home() {
           body: JSON.stringify({
             passportCountry,
             passportExpiry: passportExpiry || null,
-            destination: entry.destination === 'Other (type it in)' ? entry.customDestination.trim() : entry.destination,
+            destination: entry.destination,
             documents: resolvedDocs(),
             purpose: entry.purpose,
             entryCount: entry.entryCount,
@@ -221,7 +220,27 @@ export default function Home() {
           <h1>Your passport isn&apos;t the <em>whole</em> story.</h1>
           <p className="hero-sub">Tell us what else you hold and we&apos;ll tell you exactly what changes.</p>
         </div>
-        <div className="stamp"><div className="stamp-text">ENTRY<span className="big">✓</span>CHECKED</div></div>
+        <div className="stamp">
+          <svg width="130" height="130" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 108 128 Q 138 128 138 100 Q 138 82 122 82" stroke="#D9B979" strokeWidth="9" fill="none" strokeLinecap="round"/>
+            <ellipse cx="80" cy="118" rx="36" ry="26" fill="#D9B979"/>
+            <circle cx="80" cy="62" r="30" fill="#D9B979"/>
+            <path d="M 56 42 L 50 18 L 72 36 Z" fill="#D9B979"/>
+            <path d="M 104 42 L 110 18 L 88 36 Z" fill="#D9B979"/>
+            <path d="M 58 38 L 55 24 L 68 35 Z" fill="#132038"/>
+            <path d="M 102 38 L 105 24 L 92 35 Z" fill="#132038"/>
+            <circle cx="69" cy="60" r="3.2" fill="#132038"/>
+            <circle cx="91" cy="60" r="3.2" fill="#132038"/>
+            <path d="M 76 70 Q 80 74 84 70" stroke="#132038" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+            <path d="M 55 66 L 40 63 M 55 70 L 40 71" stroke="#132038" strokeWidth="1.3" opacity="0.5"/>
+            <path d="M 105 66 L 120 63 M 105 70 L 120 71" stroke="#132038" strokeWidth="1.3" opacity="0.5"/>
+            <rect x="44" y="98" width="72" height="40" rx="4" fill="#F6F1E3" stroke="#132038" strokeWidth="2.5"/>
+            <path d="M 58 120 L 66 128 L 82 106" stroke="#3C5A44" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            <text x="98" y="123" fontFamily="IBM Plex Mono, monospace" fontSize="13" fontWeight="700" fill="#132038" textAnchor="middle">OK</text>
+            <ellipse cx="48" cy="99" rx="8" ry="6" fill="#D9B979" transform="rotate(-20 48 99)"/>
+            <ellipse cx="112" cy="99" rx="8" ry="6" fill="#D9B979" transform="rotate(20 112 99)"/>
+          </svg>
+        </div>
       </div>
 
       <main>
@@ -276,22 +295,10 @@ export default function Home() {
             <div key={i} className="stop-card">
               <div className="row">
                 <select className="dest-select" value={entry.destination} onChange={(e) => updateDestField(i, 'destination', e.target.value)}>
-                  {DESTINATIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-                  <option value="Other (type it in)">Other (type it in)</option>
+                  {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {destEntries.length > 1 && <button className="remove-btn" onClick={() => removeDestination(i)}>×</button>}
               </div>
-              {entry.destination === 'Other (type it in)' && (
-                <input
-                  type="text"
-                  list="country-suggestions"
-                  placeholder="Type any country..."
-                  value={entry.customDestination}
-                  onChange={(e) => updateDestField(i, 'customDestination', e.target.value)}
-                  className="custom-doc-input"
-                  style={{ marginBottom: 10 }}
-                />
-              )}
               <div className="stop-fields">
                 <div>
                   <label className="small-label">Purpose</label>
@@ -332,9 +339,6 @@ export default function Home() {
             </div>
           ))}
           <button className="add-btn" onClick={addDestination}>+ Add another stop</button>
-          <datalist id="country-suggestions">
-            {COUNTRIES.map((c) => <option key={c} value={c} />)}
-          </datalist>
 
           <div className="submit-row">
             <button className="stamp-btn" onClick={handleCheck} disabled={loading}>
@@ -378,12 +382,9 @@ export default function Home() {
         .hero h1 em { font-style:italic; font-weight:400; color:#D9B979; }
         .hero-sub { font-size:16px; line-height:1.6; color:#CBC3AE; max-width:520px; margin:0; }
         .stamp {
-          position:absolute; top:44px; right:40px; width:110px; height:110px;
-          border:2px solid #D9B979; border-radius:50%; display:flex; align-items:center; justify-content:center;
-          transform:rotate(-12deg); opacity:.9;
+          position:absolute; top:30px; right:40px; width:130px; height:130px;
+          display:flex; align-items:center; justify-content:center;
         }
-        .stamp-text { font-family:'IBM Plex Mono',monospace; color:#D9B979; text-align:center; font-size:9px; letter-spacing:.08em; line-height:1.4; }
-        .stamp-text .big { font-size:15px; font-weight:600; display:block; margin:1px 0; }
 
         main { max-width:760px; margin:0 auto; padding:44px 24px 80px; }
         .section-label { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; }
