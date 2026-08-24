@@ -55,6 +55,7 @@ const LAYOVER_DURATIONS = ['Under 24 hours', '24+ hours'];
 function newDestinationEntry() {
   return {
     destination: DESTINATIONS[0],
+    customDestination: '',
     purpose: 'Tourist',
     entryCount: 'Single entry',
     travelDate: '',
@@ -189,7 +190,7 @@ export default function Home() {
           body: JSON.stringify({
             passportCountry,
             passportExpiry: passportExpiry || null,
-            destination: entry.destination,
+            destination: entry.destination === 'Other (type it in)' ? entry.customDestination.trim() : entry.destination,
             documents: resolvedDocs(),
             purpose: entry.purpose,
             entryCount: entry.entryCount,
@@ -276,9 +277,21 @@ export default function Home() {
               <div className="row">
                 <select className="dest-select" value={entry.destination} onChange={(e) => updateDestField(i, 'destination', e.target.value)}>
                   {DESTINATIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  <option value="Other (type it in)">Other (type it in)</option>
                 </select>
                 {destEntries.length > 1 && <button className="remove-btn" onClick={() => removeDestination(i)}>×</button>}
               </div>
+              {entry.destination === 'Other (type it in)' && (
+                <input
+                  type="text"
+                  list="country-suggestions"
+                  placeholder="Type any country..."
+                  value={entry.customDestination}
+                  onChange={(e) => updateDestField(i, 'customDestination', e.target.value)}
+                  className="custom-doc-input"
+                  style={{ marginBottom: 10 }}
+                />
+              )}
               <div className="stop-fields">
                 <div>
                   <label className="small-label">Purpose</label>
@@ -319,6 +332,9 @@ export default function Home() {
             </div>
           ))}
           <button className="add-btn" onClick={addDestination}>+ Add another stop</button>
+          <datalist id="country-suggestions">
+            {COUNTRIES.map((c) => <option key={c} value={c} />)}
+          </datalist>
 
           <div className="submit-row">
             <button className="stamp-btn" onClick={handleCheck} disabled={loading}>
