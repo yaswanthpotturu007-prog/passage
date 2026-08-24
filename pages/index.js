@@ -307,7 +307,17 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Passage — Know before you fly</title>
+        <title>StampCheck — Know before you fly</title>
+        <meta name="description" content="Your passport isn't the whole story. Check visa requirements based on your passport AND the other visas, PR cards, or permits you hold." />
+        <meta property="og:title" content="StampCheck — Know before you fly" />
+        <meta property="og:description" content="Your passport isn't the whole story. Check visa requirements based on your passport AND the other visas, PR cards, or permits you hold." />
+        <meta property="og:image" content="https://stampcheck.co/og-image.png" />
+        <meta property="og:url" content="https://stampcheck.co" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="StampCheck — Know before you fly" />
+        <meta name="twitter:description" content="Your passport isn't the whole story. Check visa requirements based on your passport AND the other visas, PR cards, or permits you hold." />
+        <meta name="twitter:image" content="https://stampcheck.co/og-image.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       </Head>
@@ -458,7 +468,7 @@ export default function Home() {
         </p>
       </main>
 
-      <footer>PASSAGE</footer>
+      <footer>STAMPCHECK</footer>
 
       <style jsx global>{`
         :root {
