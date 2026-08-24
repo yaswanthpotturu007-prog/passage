@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Head from 'next/head';
 import { COUNTRIES, DESTINATIONS } from '../lib/countries';
 
 const DOC_TYPES = [
@@ -67,50 +68,54 @@ function ResultCard({ passportCountry, res }) {
   }
 
   if (!res.found) {
-    return <div style={{ padding: 24, border: '1px solid #ddd', borderRadius: 6, marginBottom: 20 }}><p>{res.message}</p></div>;
+    return <div className="result-card"><p>{res.message}</p></div>;
   }
 
+  const verified = !!res.unlockedBy || res.baselineExhaustive;
+
   return (
-    <div style={{ padding: 24, border: '1px solid #ddd', borderRadius: 6, marginBottom: 20 }}>
-      <h2 style={{ marginTop: 0 }}>{res.result.destination_label}</h2>
-      <p><strong>Requirement:</strong> {res.result.requirement}</p>
-      <p><strong>Fee:</strong> {res.result.fee}</p>
-      <p><strong>Max stay:</strong> {res.result.max_stay}</p>
-      <p><strong>Source:</strong> {res.result.source_name}</p>
+    <div className="boarding-pass">
+      <div className="bp-main">
+        <h2>{res.result.destination_label}</h2>
+        <div className="bp-grid">
+          <div className="bp-item"><span className="k">Requirement</span><span className="v">{res.result.requirement}</span></div>
+          <div className="bp-item"><span className="k">Fee</span><span className="v">{res.result.fee}</span></div>
+          <div className="bp-item"><span className="k">Max stay</span><span className="v">{res.result.max_stay}</span></div>
+          <div className="bp-item"><span className="k">Source</span><span className="v small">{res.result.source_name}</span></div>
+        </div>
 
-      {res.unlockedBy ? (
-        <p style={{ color: '#3C5A44' }}>✓ Based on your {res.unlockedBy}</p>
-      ) : res.baselineExhaustive ? (
-        <p style={{ color: '#3C5A44' }}>✓ Confirmed: no document changes this — passport nationality decides here</p>
-      ) : (
-        <p style={{ color: '#B23A2F', fontWeight: 500 }}>
-          ⚠ {res.source === 'live_search' ? 'Auto-researched just now' : 'Not yet fully verified'} — confirm with an official source before booking.
-        </p>
-      )}
-
-      <p style={{ fontSize: 12, color: '#888' }}>
-        Confidence: {res.result.confidence} · Last checked: {res.result.verified_date}
-        {res.source === 'live_search' && ' · Found via live search'}
-      </p>
-
-      {[res.documentWarning, res.passportWarning, res.purposeWarning, res.entryWarning, res.travelDateNote]
-        .filter(Boolean)
-        .map((msg, i) => (
-          <p key={i} style={{ marginTop: 10, padding: 10, background: '#FCEFEA', border: '1px solid #E8A98F', borderRadius: 4, color: '#A63A2E', fontSize: 13 }}>
-            ⚠ {msg}
-          </p>
-        ))}
-
-      <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 12, color: '#888' }}>Was this accurate?</span>
-        {voted ? (
-          <span style={{ fontSize: 12, color: '#3C5A44' }}>Thanks for the feedback!</span>
+        {res.unlockedBy ? (
+          <div className="unlock-badge">✓ Unlocked by your {res.unlockedBy}</div>
+        ) : res.baselineExhaustive ? (
+          <div className="unlock-badge">✓ Confirmed — passport nationality decides here</div>
         ) : (
-          <>
-            <button onClick={() => sendVote('up')} style={{ padding: '4px 10px', cursor: 'pointer' }}>👍</button>
-            <button onClick={() => sendVote('down')} style={{ padding: '4px 10px', cursor: 'pointer' }}>👎</button>
-          </>
+          <div className="unlock-badge amber">
+            ⚠ {res.source === 'live_search' ? 'Auto-researched just now' : 'Not yet fully verified'} — confirm before booking
+          </div>
         )}
+
+        {[res.documentWarning, res.passportWarning, res.purposeWarning, res.entryWarning, res.travelDateNote]
+          .filter(Boolean)
+          .map((msg, i) => <p key={i} className="warning-line">⚠ {msg}</p>)}
+
+        <div className="feedback-row">
+          <span>Was this accurate?</span>
+          {voted ? (
+            <span className="thanks">Thanks!</span>
+          ) : (
+            <>
+              <button onClick={() => sendVote('up')}>👍</button>
+              <button onClick={() => sendVote('down')}>👎</button>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="bp-stub">
+        <div className="perf" />
+        <div>
+          <div className={`confidence ${verified ? 'verified' : 'auto'}`}>{verified ? 'Verified' : 'Auto-researched'}</div>
+          <div className="confidence-date">{res.result.verified_date}</div>
+        </div>
       </div>
     </div>
   );
@@ -124,24 +129,16 @@ export default function Home() {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  function addDestination() {
-    setDestEntries([...destEntries, newDestinationEntry()]);
-  }
-  function removeDestination(index) {
-    setDestEntries(destEntries.filter((_, i) => i !== index));
-  }
+  function addDestination() { setDestEntries([...destEntries, newDestinationEntry()]); }
+  function removeDestination(index) { setDestEntries(destEntries.filter((_, i) => i !== index)); }
   function updateDestField(index, field, value) {
     const updated = [...destEntries];
     updated[index] = { ...updated[index], [field]: value };
     setDestEntries(updated);
   }
 
-  function addDocRow() {
-    setDocRows([...docRows, { type: DOC_TYPES[0], custom: '', expiry: '' }]);
-  }
-  function removeDocRow(index) {
-    setDocRows(docRows.filter((_, i) => i !== index));
-  }
+  function addDocRow() { setDocRows([...docRows, { type: DOC_TYPES[0], custom: '', expiry: '' }]); }
+  function removeDocRow(index) { setDocRows(docRows.filter((_, i) => i !== index)); }
   function updateDocRowType(index, value) {
     const updated = [...docRows];
     updated[index] = { ...updated[index], type: value };
@@ -187,8 +184,7 @@ export default function Home() {
           }),
         }).then((r) => r.json())
       );
-      const allResults = await Promise.all(promises);
-      setResults(allResults);
+      setResults(await Promise.all(promises));
     } catch (err) {
       setResults([{ found: false, message: 'Something went wrong. Try again.' }]);
     }
@@ -196,155 +192,241 @@ export default function Home() {
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px', fontFamily: 'system-ui, sans-serif' }}>
-      <h1 style={{ fontSize: 34, marginBottom: 8 }}>Passage</h1>
-      <p style={{ color: '#555', marginBottom: 36 }}>
-        Your passport isn&apos;t the whole story. Tell us what else you hold.
-      </p>
+    <>
+      <Head>
+        <title>Passage — Know before you fly</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+      </Head>
 
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
-          Citizenship (passport held)
-        </label>
-        <select value={passportCountry} onChange={(e) => setPassportCountry(e.target.value)} style={{ width: '100%', padding: 10 }}>
-          {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <div style={{ marginTop: 8 }}>
-          <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#888' }}>
-            Passport expiry date (optional)
-          </label>
-          <input type="date" value={passportExpiry} onChange={(e) => setPassportExpiry(e.target.value)}
-            style={{ padding: 8, border: '1px solid #ccc', borderRadius: 4 }} />
+      <div className="hero">
+        <div className="hero-inner">
+          <p className="eyebrow">Passport + secondary documents, checked together</p>
+          <h1>Your passport isn&apos;t the <em>whole</em> story.</h1>
+          <p className="hero-sub">Tell us what else you hold — a PR card, a visa, a Green Card — and we&apos;ll tell you exactly what changes.</p>
         </div>
+        <div className="stamp"><div className="stamp-text">ENTRY<span className="big">✓</span>CHECKED</div></div>
       </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 6, color: '#666' }}>
-          Other visas, residency or permits you hold
-        </label>
-        {docRows.map((row, i) => (
-          <div key={i} style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <select value={row.type} onChange={(e) => updateDocRowType(i, e.target.value)} style={{ flex: 1, padding: 10 }}>
-                {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <button onClick={() => removeDocRow(i)} style={{ padding: '0 14px' }}>×</button>
-            </div>
-            {row.type === 'Other (type it in)' && (
-              <div style={{ marginTop: 6 }}>
-                <input
-                  type="text"
-                  list="doc-suggestions"
-                  placeholder="e.g. Australian PR, UAE residence visa..."
-                  value={row.custom}
-                  onChange={(e) => updateDocRowCustom(i, e.target.value)}
-                  style={{ width: '100%', padding: 10, border: '1px solid #ccc', borderRadius: 4 }}
-                />
-              </div>
-            )}
-            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ fontSize: 11, color: '#888' }}>Expiry (optional):</label>
-              <input type="date" value={row.expiry} onChange={(e) => updateDocRowExpiry(i, e.target.value)}
-                style={{ padding: 6, border: '1px solid #ccc', borderRadius: 4, fontSize: 13 }} />
+      <main>
+        <div className="section-label"><span className="num">1</span><h2>Your travel documents</h2></div>
+        <div className="form-card">
+          <div className="field">
+            <label>Citizenship (passport held)</label>
+            <select value={passportCountry} onChange={(e) => setPassportCountry(e.target.value)}>
+              {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <div className="sub-field">
+              <label className="small-label">Passport expiry date (optional)</label>
+              <input type="date" value={passportExpiry} onChange={(e) => setPassportExpiry(e.target.value)} />
             </div>
           </div>
-        ))}
-        <datalist id="doc-suggestions">
-          {DOC_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
-        </datalist>
-        <button onClick={addDocRow} style={{ marginTop: 4, padding: '8px 14px' }}>
-          + Add another document
-        </button>
-      </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, marginBottom: 10, color: '#666' }}>
-          Your trip — each stop can have its own purpose (e.g. transit through one, tourism in another)
-        </label>
-
-        {destEntries.map((entry, i) => (
-          <div key={i} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 16, marginBottom: 12, background: '#FAFAF8' }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
-              <select
-                value={entry.destination}
-                onChange={(e) => updateDestField(i, 'destination', e.target.value)}
-                style={{ flex: 1, padding: 10, fontWeight: 600 }}
-              >
-                {DESTINATIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              {destEntries.length > 1 && (
-                <button onClick={() => removeDestination(i)} style={{ padding: '0 14px' }}>×</button>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#888' }}>Purpose</label>
-                <select value={entry.purpose} onChange={(e) => updateDestField(i, 'purpose', e.target.value)} style={{ width: '100%', padding: 8 }}>
-                  {PURPOSES.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#888' }}>Entry type</label>
-                <select value={entry.entryCount} onChange={(e) => updateDestField(i, 'entryCount', e.target.value)} style={{ width: '100%', padding: 8 }}>
-                  {ENTRY_COUNTS.map((e2) => <option key={e2} value={e2}>{e2}</option>)}
-                </select>
-              </div>
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#888' }}>Date (optional)</label>
-                <input type="date" value={entry.travelDate} onChange={(e) => updateDestField(i, 'travelDate', e.target.value)}
-                  style={{ width: '100%', padding: 7, border: '1px solid #ccc', borderRadius: 4 }} />
-              </div>
-            </div>
-
-            {entry.purpose === 'Transit' && (
-              <div style={{ marginTop: 12, padding: 12, background: '#FFF6D9', border: '1px dashed #D4B84A', borderRadius: 4 }}>
-                <p style={{ fontSize: 11, color: '#7A6A1F', marginTop: 0, marginBottom: 8 }}>
-                  Transit rules are always shown as auto-researched, even for destinations we&apos;ve otherwise verified.
-                </p>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 160 }}>
-                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#666' }}>Leaving the airport?</label>
-                    <select value={entry.leavingAirport} onChange={(e) => updateDestField(i, 'leavingAirport', e.target.value)} style={{ width: '100%', padding: 8 }}>
-                      {LEAVING_AIRPORT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 140 }}>
-                    <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: '#666' }}>Layover duration</label>
-                    <select value={entry.layoverDuration} onChange={(e) => updateDestField(i, 'layoverDuration', e.target.value)} style={{ width: '100%', padding: 8 }}>
-                      {LAYOVER_DURATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
+          <div className="field">
+            <label>Other visas, residency or permits you hold</label>
+            {docRows.map((row, i) => (
+              <div key={i} className="doc-row-wrap">
+                <div className="row">
+                  <select value={row.type} onChange={(e) => updateDocRowType(i, e.target.value)}>
+                    {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <button className="remove-btn" onClick={() => removeDocRow(i)}>×</button>
+                </div>
+                {row.type === 'Other (type it in)' && (
+                  <input
+                    type="text" list="doc-suggestions"
+                    placeholder="e.g. Australian PR, UAE residence visa..."
+                    value={row.custom} onChange={(e) => updateDocRowCustom(i, e.target.value)}
+                    className="custom-doc-input"
+                  />
+                )}
+                <div className="expiry-row">
+                  <span className="small-label">Expiry (optional):</span>
+                  <input type="date" value={row.expiry} onChange={(e) => updateDocRowExpiry(i, e.target.value)} />
                 </div>
               </div>
-            )}
+            ))}
+            <datalist id="doc-suggestions">
+              {DOC_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
+            </datalist>
+            <button className="add-btn" onClick={addDocRow}>+ Add another document</button>
           </div>
-        ))}
-        <button onClick={addDestination} style={{ marginTop: 4, padding: '8px 14px' }}>
-          + Add another stop
-        </button>
-      </div>
-
-      <button
-        onClick={handleCheck}
-        disabled={loading}
-        style={{ background: '#A63A2E', color: 'white', border: 'none', padding: '14px 28px', borderRadius: 4, fontSize: 15, cursor: 'pointer' }}
-      >
-        {loading ? 'Checking…' : 'Stamp my check'}
-      </button>
-
-      {results && (
-        <div style={{ marginTop: 40 }}>
-          {results.map((res, i) => (
-            <ResultCard key={i} passportCountry={passportCountry} res={res} />
-          ))}
         </div>
-      )}
 
-      <p style={{ marginTop: 48, fontSize: 12, color: '#999' }}>
-        Verified destinations (UAE, UK, Schengen) use manually checked data assuming tourist, single-entry travel.
-        Everything else is researched live when you search it. Always confirm with official government sources before booking travel.
-      </p>
-    </div>
+        <div className="section-label"><span className="num">2</span><h2>Your trip</h2></div>
+        <div className="form-card">
+          <label className="stops-intro">Each stop can have its own purpose — transit through one, tourism in another</label>
+          {destEntries.map((entry, i) => (
+            <div key={i} className="stop-card">
+              <div className="row">
+                <select className="dest-select" value={entry.destination} onChange={(e) => updateDestField(i, 'destination', e.target.value)}>
+                  {DESTINATIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {destEntries.length > 1 && <button className="remove-btn" onClick={() => removeDestination(i)}>×</button>}
+              </div>
+              <div className="stop-fields">
+                <div>
+                  <label className="small-label">Purpose</label>
+                  <select value={entry.purpose} onChange={(e) => updateDestField(i, 'purpose', e.target.value)}>
+                    {PURPOSES.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="small-label">Entry type</label>
+                  <select value={entry.entryCount} onChange={(e) => updateDestField(i, 'entryCount', e.target.value)}>
+                    {ENTRY_COUNTS.map((e2) => <option key={e2} value={e2}>{e2}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="small-label">Date (optional)</label>
+                  <input type="date" value={entry.travelDate} onChange={(e) => updateDestField(i, 'travelDate', e.target.value)} />
+                </div>
+              </div>
+              {entry.purpose === 'Transit' && (
+                <div className="transit-box">
+                  <p>Transit rules are always shown as auto-researched, even for destinations we&apos;ve otherwise verified.</p>
+                  <div className="stop-fields">
+                    <div>
+                      <label className="small-label">Leaving the airport?</label>
+                      <select value={entry.leavingAirport} onChange={(e) => updateDestField(i, 'leavingAirport', e.target.value)}>
+                        {LEAVING_AIRPORT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="small-label">Layover duration</label>
+                      <select value={entry.layoverDuration} onChange={(e) => updateDestField(i, 'layoverDuration', e.target.value)}>
+                        {LAYOVER_DURATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          <button className="add-btn" onClick={addDestination}>+ Add another stop</button>
+
+          <div className="submit-row">
+            <button className="stamp-btn" onClick={handleCheck} disabled={loading}>
+              {loading ? 'Checking…' : 'Stamp my check'}
+            </button>
+          </div>
+        </div>
+
+        {results && (
+          <div className="results">
+            <div className="section-label"><span className="num">3</span><h2>Results</h2></div>
+            {results.map((res, i) => <ResultCard key={i} passportCountry={passportCountry} res={res} />)}
+          </div>
+        )}
+
+        <p className="disclaimer">
+          Verified destinations (UAE, UK, Schengen) use manually checked data assuming tourist, single-entry travel.
+          Everything else is researched live when you search it. Always confirm with official government sources before booking travel.
+        </p>
+      </main>
+
+      <footer>PASSAGE</footer>
+
+      <style jsx global>{`
+        :root {
+          --ink:#1C2B45; --ink-2:#132038; --paper:#F6F1E3; --paper-2:#EDE4CC;
+          --stamp-red:#A63A2E; --brass:#A9843C; --verified:#3C5A44; --verified-bg:#E4EBE0;
+          --amber:#8A5A22; --amber-bg:#F3E7CF; --line:#C9BFA0;
+        }
+        * { box-sizing: border-box; }
+        body { margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+        h1,h2,.serif { font-family:'Fraunces',serif; }
+        select, input { font-family:'Inter',sans-serif; }
+      `}</style>
+
+      <style jsx>{`
+        .hero { background:var(--ink); color:var(--paper); padding:72px 24px 64px; position:relative; overflow:hidden; }
+        .hero-inner { max-width:760px; margin:0 auto; position:relative; z-index:2; }
+        .eyebrow { font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#B7A98A; margin:0 0 16px; }
+        .hero h1 { font-size:clamp(30px,5vw,48px); font-weight:600; line-height:1.08; margin:0 0 18px; }
+        .hero h1 em { font-style:italic; font-weight:400; color:#D9B979; }
+        .hero-sub { font-size:16px; line-height:1.6; color:#CBC3AE; max-width:520px; margin:0; }
+        .stamp {
+          position:absolute; top:44px; right:40px; width:110px; height:110px;
+          border:2px solid #D9B979; border-radius:50%; display:flex; align-items:center; justify-content:center;
+          transform:rotate(-12deg); opacity:.9;
+        }
+        .stamp-text { font-family:'IBM Plex Mono',monospace; color:#D9B979; text-align:center; font-size:9px; letter-spacing:.08em; line-height:1.4; }
+        .stamp-text .big { font-size:15px; font-weight:600; display:block; margin:1px 0; }
+
+        main { max-width:760px; margin:0 auto; padding:44px 24px 80px; }
+        .section-label { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; }
+        .section-label .num {
+          font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--brass);
+          border:1px solid var(--brass); border-radius:50%; width:22px; height:22px;
+          display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        }
+        .section-label h2 { font-size:20px; font-weight:600; margin:0; }
+
+        .form-card { background:var(--paper-2); border:1px solid var(--line); border-radius:5px; padding:26px; margin-bottom:36px; }
+        .field { margin-bottom:22px; }
+        .field:last-child { margin-bottom:0; }
+        label { display:block; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#6B6249; margin-bottom:7px; }
+        .stops-intro { margin-bottom:16px; }
+        .small-label { font-size:10.5px; color:#7A7259; margin-bottom:4px; text-transform:none; letter-spacing:0; }
+        select, input[type=date], input[type=text] {
+          width:100%; padding:10px 11px; background:var(--paper); border:none; border-bottom:2px solid var(--ink);
+          font-size:14.5px; color:var(--ink); border-radius:2px 2px 0 0;
+        }
+        select:focus, input:focus { outline:2px solid var(--brass); outline-offset:1px; }
+        .sub-field { margin-top:10px; max-width:320px; }
+
+        .row { display:flex; gap:8px; margin-bottom:6px; }
+        .row select { flex:1; }
+        .dest-select { font-weight:600; }
+        .remove-btn { background:none; border:1px solid var(--line); color:var(--amber); width:38px; border-radius:4px; cursor:pointer; font-size:16px; }
+        .add-btn { margin-top:10px; background:none; border:1px dashed var(--brass); color:var(--ink); padding:9px 16px; border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:12px; cursor:pointer; }
+        .doc-row-wrap { margin-bottom:14px; padding-bottom:14px; border-bottom:1px dashed var(--line); }
+        .doc-row-wrap:last-of-type { border-bottom:none; }
+        .custom-doc-input { margin-bottom:8px; }
+        .expiry-row { display:flex; align-items:center; gap:8px; }
+        .expiry-row input { width:auto; }
+
+        .stop-card { border:1px solid var(--line); border-radius:5px; padding:16px; margin-bottom:12px; background:var(--paper); }
+        .stop-fields { display:flex; gap:12px; flex-wrap:wrap; }
+        .stop-fields > div { flex:1; min-width:130px; }
+        .transit-box { margin-top:12px; padding:12px; background:var(--amber-bg); border:1px dashed var(--brass); border-radius:4px; }
+        .transit-box p { font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--amber); margin:0 0 10px; text-transform:none; letter-spacing:0; }
+
+        .submit-row { margin-top:22px; }
+        .stamp-btn { background:var(--stamp-red); color:#F7F1E1; border:none; padding:14px 30px; font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:.08em; text-transform:uppercase; border-radius:3px; cursor:pointer; }
+        .stamp-btn:disabled { opacity:.6; cursor:default; }
+
+        .results { margin-top:8px; }
+        .boarding-pass { position:relative; display:grid; grid-template-columns:1fr 150px; background:var(--paper-2); border:1px solid var(--line); border-radius:6px; margin-bottom:22px; overflow:hidden; }
+        .bp-main { padding:22px 24px; }
+        .bp-main h2 { font-size:22px; margin:0 0 14px; }
+        .bp-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 20px; margin-bottom:14px; }
+        .bp-item .k { display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:#7A7259; margin-bottom:3px; }
+        .bp-item .v { font-size:14.5px; font-weight:500; }
+        .bp-item .v.small { font-size:12.5px; font-weight:400; }
+        .unlock-badge { display:inline-flex; align-items:center; gap:6px; background:var(--verified-bg); color:var(--verified); border:1px solid #B7C7B0; padding:6px 12px; border-radius:16px; font-size:12.5px; margin-bottom:8px; }
+        .unlock-badge.amber { background:var(--amber-bg); color:var(--amber); border-color:#D9C193; }
+        .warning-line { margin-top:8px; padding:8px 10px; background:#FCEFEA; border:1px solid #E8A98F; border-radius:4px; color:var(--stamp-red); font-size:12.5px; }
+        .feedback-row { margin-top:14px; display:flex; align-items:center; gap:8px; font-size:11.5px; color:#7A7259; }
+        .feedback-row button { padding:3px 9px; cursor:pointer; border:1px solid var(--line); background:var(--paper); border-radius:4px; }
+        .feedback-row .thanks { color:var(--verified); }
+
+        .bp-stub { background:var(--ink); color:var(--paper); padding:20px 16px; display:flex; flex-direction:column; justify-content:space-between; position:relative; }
+        .perf { position:absolute; left:0; top:12px; bottom:12px; border-left:2px dashed #4A5A78; }
+        .confidence { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.05em; text-transform:uppercase; }
+        .confidence.verified { color:#9FD1A8; }
+        .confidence.auto { color:#E0B97A; }
+        .confidence-date { font-size:10.5px; color:#8695AC; margin-top:3px; }
+
+        .disclaimer { margin-top:40px; font-size:12px; color:#7A7259; border-top:1px solid var(--line); padding-top:18px; line-height:1.6; }
+        footer { text-align:center; padding:26px 24px 44px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#9A8F6E; letter-spacing:.08em; }
+
+        @media (max-width:600px) {
+          .boarding-pass { grid-template-columns:1fr; }
+          .bp-stub::before { display:none; }
+        }
+      `}</style>
+    </>
   );
 }
