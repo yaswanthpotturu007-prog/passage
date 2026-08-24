@@ -9,7 +9,7 @@ import { DESTINATION_KEY_MAP } from '../../lib/countries';
 // unexpected bill. Verified destinations (UAE/UK/Schengen, non-transit)
 // don't count against this since they're answered straight from the
 // database with no AI call involved.
-const DAILY_LIVE_SEARCH_CAP = 3;
+const DAILY_LIVE_SEARCH_CAP = 5;
 
 function startOfTodayUTC() {
   const now = new Date();
