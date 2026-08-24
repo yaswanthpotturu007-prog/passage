@@ -272,6 +272,12 @@ export default function Home() {
   async function handleCheck() {
     setLoading(true);
     setResults(null);
+    // Private testing bypass: visiting the site as stampcheck.co/?key=yoursecret
+    // attaches that key to every search so you/friends can test without
+    // touching the public daily search cap. See check.js for the other half.
+    const adminKey = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('key')
+      : null;
     try {
       const promises = destEntries.map((entry) =>
         fetch('/api/check', {
@@ -287,6 +293,7 @@ export default function Home() {
             travelDate: entry.travelDate || null,
             leavingAirport: entry.purpose === 'Transit' ? entry.leavingAirport : null,
             layoverDuration: entry.purpose === 'Transit' ? entry.layoverDuration : null,
+            adminKey,
           }),
         }).then((r) => r.json())
       );
