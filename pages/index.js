@@ -96,7 +96,16 @@ function ResultCard({ passportCountry, res }) {
           <div className="bp-item"><span className="k">Requirement</span><span className="v">{res.result.requirement}</span></div>
           <div className="bp-item"><span className="k">Fee</span><span className="v">{res.result.fee}</span></div>
           <div className="bp-item"><span className="k">Max stay</span><span className="v">{res.result.max_stay}</span></div>
-          <div className="bp-item"><span className="k">Source</span><span className="v small">{res.result.source_name}</span></div>
+          <div className="bp-item">
+            <span className="k">Source</span>
+            {res.result.source_url ? (
+              <a href={res.result.source_url} target="_blank" rel="noopener noreferrer" className="v small source-link">
+                {res.result.source_name} ↗
+              </a>
+            ) : (
+              <span className="v small">{res.result.source_name}</span>
+            )}
+          </div>
         </div>
 
         {res.unlockedBy ? (
@@ -437,6 +446,8 @@ export default function Home() {
         .bp-item .k { display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:#7A7259; margin-bottom:3px; }
         .bp-item .v { font-size:14.5px; font-weight:500; }
         .bp-item .v.small { font-size:12.5px; font-weight:400; }
+        .source-link { color:var(--verified); text-decoration:underline; display:inline-block; }
+        .source-link:hover { color:var(--stamp-red); }
         .unlock-badge { display:inline-flex; align-items:center; gap:6px; background:var(--verified-bg); color:var(--verified); border:1px solid #B7C7B0; padding:6px 12px; border-radius:16px; font-size:12.5px; margin-bottom:8px; }
         .unlock-badge.amber { background:var(--amber-bg); color:var(--amber); border-color:#D9C193; }
         .warning-line { margin-top:8px; padding:8px 10px; background:#FCEFEA; border:1px solid #E8A98F; border-radius:4px; color:var(--stamp-red); font-size:12.5px; }
