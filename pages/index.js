@@ -6,30 +6,45 @@ const DOC_TYPES = [
   'Canadian PR card',
   'Canadian work permit',
   'Canadian visitor visa',
+  'Canadian study permit',
   'US visa (B1/B2)',
   'US Green Card',
+  'US work visa (H1B/L1)',
+  'US student visa (F1)',
   'UK visa / residence permit',
+  'UK Skilled Worker visa',
   'Schengen visa',
-  'Other (type it in)',
-];
-
-const DOC_SUGGESTIONS = [
+  'EU Blue Card',
   'Australian PR (permanent residency)',
+  'Australian skilled/work visa',
   'New Zealand residency',
+  'New Zealand work visa',
   'UAE residence visa',
+  'UAE Golden Visa',
   'Saudi Arabia Iqama (residence permit)',
   'Qatar residence permit',
-  'Singapore Employment Pass',
+  'Kuwait residence permit',
+  'Bahrain residence permit',
+  'Oman residence permit',
   'Singapore PR',
+  'Singapore Employment Pass',
   'Hong Kong visa',
   'Japan long-term resident visa',
   'South Korea F-visa (residency)',
   'Ireland residence permit',
   'Germany residence permit (Aufenthaltstitel)',
+  'Other (type it in)',
+];
+
+const DOC_SUGGESTIONS = [
   'France Carte de séjour',
   'APEC Business Travel Card',
   'Refugee travel document',
   'Diplomatic/official passport endorsement',
+  'Malaysia MM2H visa',
+  'South Africa residence permit',
+  'Switzerland residence permit',
+  'Thailand Elite Visa',
 ];
 
 const PURPOSES = ['Tourist', 'Business', 'Transit', 'Family visit'];
