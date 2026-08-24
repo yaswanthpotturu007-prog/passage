@@ -203,7 +203,7 @@ export default function Home() {
         <div className="hero-inner">
           <p className="eyebrow">Passport + secondary documents, checked together</p>
           <h1>Your passport isn&apos;t the <em>whole</em> story.</h1>
-          <p className="hero-sub">Tell us what else you hold — a PR card, a visa, a Green Card — and we&apos;ll tell you exactly what changes.</p>
+          <p className="hero-sub">Tell us what else you hold and we&apos;ll tell you exactly what changes.</p>
         </div>
         <div className="stamp"><div className="stamp-text">ENTRY<span className="big">✓</span>CHECKED</div></div>
       </div>
