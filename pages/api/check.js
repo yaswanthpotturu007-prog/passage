@@ -4,6 +4,39 @@
 import { supabase } from '../../lib/supabaseClient';
 import { DESTINATION_KEY_MAP } from '../../lib/countries';
 
+// Site-wide safety net: caps how many LIVE (uncached) AI searches can run
+// across the whole site per day, so a traffic spike can't run up an
+// unexpected bill. Verified destinations (UAE/UK/Schengen, non-transit)
+// don't count against this since they're answered straight from the
+// database with no AI call involved.
+const DAILY_LIVE_SEARCH_CAP = 3;
+
+function startOfTodayUTC() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+}
+
+async function todaysLiveSearchCount() {
+  const { count, error } = await supabase
+    .from('search_log')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', startOfTodayUTC());
+  if (error) {
+    // If the log itself is unreachable, fail OPEN (allow the search) rather
+    // than blocking the whole site over a logging problem.
+    console.error('search_log count error:', error.message);
+    return 0;
+  }
+  return count || 0;
+}
+
+async function logLiveSearch() {
+  const { error } = await supabase.from('search_log').insert({});
+  if (error) console.error('search_log insert error:', error.message);
+}
+
+const CAP_MESSAGE = "We've hit today's live-search limit (this keeps our costs predictable while we're testing). Please try again tomorrow, or try a destination we've already verified: UAE, UK, or Schengen.";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -19,11 +52,19 @@ export default async function handler(req, res) {
     travelDate,       // optional date string
     leavingAirport,   // "Yes" or "No" - only relevant when purpose is Transit
     layoverDuration,  // "Under 24 hours" or "24+ hours" - only relevant when purpose is Transit
+    adminKey,         // optional - matches ADMIN_BYPASS_KEY env var, skips the daily cap
   } = req.body;
 
   if (!passportCountry || !destination) {
     return res.status(400).json({ error: 'Missing passportCountry or destination' });
   }
+
+  // Private bypass for testing (you + friends): visiting the site with
+  // ?key=yoursecret attaches that key to every search. If it matches the
+  // ADMIN_BYPASS_KEY env var, that search skips the daily cap AND isn't
+  // logged against it - so friends testing the site never eats into the
+  // public 3-per-day budget.
+  const isBypass = !!(adminKey && process.env.ADMIN_BYPASS_KEY && adminKey === process.env.ADMIN_BYPASS_KEY);
 
   const destinationKey = DESTINATION_KEY_MAP[destination] || destination.toLowerCase();
 
@@ -33,8 +74,15 @@ export default async function handler(req, res) {
   // database, and its result is never cached as a general destination answer
   // (that would risk polluting the entry-rule cache with transit-only info).
   if (purpose === 'Transit') {
+    if (!isBypass) {
+      const todaysCount = await todaysLiveSearchCount();
+      if (todaysCount >= DAILY_LIVE_SEARCH_CAP) {
+        return res.status(200).json({ found: false, message: CAP_MESSAGE });
+      }
+    }
     try {
       const liveResult = await liveSearch(passportCountry, destination, documents, purpose, entryCount, leavingAirport, layoverDuration);
+      if (!isBypass) await logLiveSearch();
       return res.status(200).json({
         found: true,
         result: {
@@ -143,8 +191,16 @@ export default async function handler(req, res) {
   }
 
   // ---------- STEP 2: live search fallback ----------
+  if (!isBypass) {
+    const todaysCount = await todaysLiveSearchCount();
+    if (todaysCount >= DAILY_LIVE_SEARCH_CAP) {
+      return res.status(200).json({ found: false, message: CAP_MESSAGE });
+    }
+  }
+
   try {
     const liveResult = await liveSearch(passportCountry, destination, documents, purpose, entryCount);
+    if (!isBypass) await logLiveSearch();
 
     await supabase.from('visa_rules').insert({
       passport_country: passportCountry,
