@@ -221,24 +221,24 @@ export default function Home() {
           <p className="hero-sub">Tell us what else you hold and we&apos;ll tell you exactly what changes.</p>
         </div>
         <div className="stamp">
-          <svg width="130" height="130" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 108 128 Q 138 128 138 100 Q 138 82 122 82" stroke="#D9B979" strokeWidth="9" fill="none" strokeLinecap="round"/>
-            <ellipse cx="80" cy="118" rx="36" ry="26" fill="#D9B979"/>
-            <circle cx="80" cy="62" r="30" fill="#D9B979"/>
-            <path d="M 56 42 L 50 18 L 72 36 Z" fill="#D9B979"/>
-            <path d="M 104 42 L 110 18 L 88 36 Z" fill="#D9B979"/>
-            <path d="M 58 38 L 55 24 L 68 35 Z" fill="#132038"/>
-            <path d="M 102 38 L 105 24 L 92 35 Z" fill="#132038"/>
-            <circle cx="69" cy="60" r="3.2" fill="#132038"/>
-            <circle cx="91" cy="60" r="3.2" fill="#132038"/>
-            <path d="M 76 70 Q 80 74 84 70" stroke="#132038" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
-            <path d="M 55 66 L 40 63 M 55 70 L 40 71" stroke="#132038" strokeWidth="1.3" opacity="0.5"/>
-            <path d="M 105 66 L 120 63 M 105 70 L 120 71" stroke="#132038" strokeWidth="1.3" opacity="0.5"/>
-            <rect x="44" y="98" width="72" height="40" rx="4" fill="#F6F1E3" stroke="#132038" strokeWidth="2.5"/>
-            <path d="M 58 120 L 66 128 L 82 106" stroke="#3C5A44" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-            <text x="98" y="123" fontFamily="IBM Plex Mono, monospace" fontSize="13" fontWeight="700" fill="#132038" textAnchor="middle">OK</text>
-            <ellipse cx="48" cy="99" rx="8" ry="6" fill="#D9B979" transform="rotate(-20 48 99)"/>
-            <ellipse cx="112" cy="99" rx="8" ry="6" fill="#D9B979" transform="rotate(20 112 99)"/>
+          <svg width="140" height="140" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 118 138 Q 150 138 150 108 Q 150 90 133 90" stroke="#D9B979" strokeWidth="9" fill="none" strokeLinecap="round"/>
+            <ellipse cx="85" cy="128" rx="38" ry="27" fill="#D9B979"/>
+            <circle cx="85" cy="65" r="31" fill="#D9B979"/>
+            <path d="M 60 44 L 54 19 L 77 38 Z" fill="#D9B979"/>
+            <path d="M 110 44 L 116 19 L 93 38 Z" fill="#D9B979"/>
+            <path d="M 62 40 L 59 25 L 73 37 Z" fill="#132038"/>
+            <path d="M 108 40 L 111 25 L 97 37 Z" fill="#132038"/>
+            <circle cx="73" cy="63" r="3.4" fill="#132038"/>
+            <circle cx="97" cy="63" r="3.4" fill="#132038"/>
+            <path d="M 80 74 Q 85 78 90 74" stroke="#132038" strokeWidth="2.3" fill="none" strokeLinecap="round"/>
+            <path d="M 58 69 L 42 66 M 58 73 L 42 74" stroke="#132038" strokeWidth="1.3" opacity="0.5"/>
+            <path d="M 112 69 L 128 66 M 112 73 L 128 74" stroke="#132038" strokeWidth="1.3" opacity="0.5"/>
+            <rect x="35" y="104" width="100" height="46" rx="4" fill="#F6F1E3" stroke="#132038" strokeWidth="2.5"/>
+            <text x="85" y="123" fontFamily="IBM Plex Mono, monospace" fontSize="11" fontWeight="700" fill="#132038" textAnchor="middle" letterSpacing="0.5">WE GOT</text>
+            <text x="85" y="139" fontFamily="IBM Plex Mono, monospace" fontSize="11" fontWeight="700" fill="#132038" textAnchor="middle" letterSpacing="0.5">YOU</text>
+            <ellipse cx="41" cy="105" rx="8" ry="6" fill="#D9B979" transform="rotate(-20 41 105)"/>
+            <ellipse cx="129" cy="105" rx="8" ry="6" fill="#D9B979" transform="rotate(20 129 105)"/>
           </svg>
         </div>
       </div>
