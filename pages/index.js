@@ -374,7 +374,7 @@ export default function Home() {
         select, input { font-family:'Inter',sans-serif; }
       `}</style>
 
-      <style jsx>{`
+      <style jsx global>{`
         .hero { background:var(--ink); color:var(--paper); padding:72px 24px 64px; position:relative; overflow:hidden; }
         .hero-inner { max-width:760px; margin:0 auto; position:relative; z-index:2; }
         .eyebrow { font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#B7A98A; margin:0 0 16px; }
