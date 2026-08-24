@@ -35,7 +35,7 @@ async function logLiveSearch() {
   if (error) console.error('search_log insert error:', error.message);
 }
 
-const CAP_MESSAGE = "We've hit today's live-search limit (this keeps our costs predictable while we're testing). Please try again tomorrow, or try a destination we've already verified: UAE, UK, or Schengen.";
+const CAP_MESSAGE = "We've hit today's live-search limit. Please try again tomorrow.";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
