@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Head from 'next/head';
 import { COUNTRIES } from '../lib/countries';
 
@@ -63,8 +63,33 @@ function newDestinationEntry() {
   };
 }
 
+// Loads html2canvas from a CDN the first time someone hits "Share", rather
+// than requiring it as an npm dependency. Keeps the deploy process to a
+// single file (index.js) with no package.json changes needed.
+function loadHtml2Canvas() {
+  return new Promise((resolve, reject) => {
+    if (window.html2canvas) return resolve(window.html2canvas);
+    const existing = document.querySelector('script[data-html2canvas]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.html2canvas));
+      existing.addEventListener('error', reject);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.async = true;
+    script.dataset.html2canvas = 'true';
+    script.onload = () => resolve(window.html2canvas);
+    script.onerror = () => reject(new Error('Could not load the image library'));
+    document.body.appendChild(script);
+  });
+}
+
 function ResultCard({ passportCountry, res }) {
   const [voted, setVoted] = useState(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareError, setShareError] = useState(false);
+  const cardRef = useRef(null);
 
   async function sendVote(vote) {
     setVoted(vote);
@@ -82,6 +107,56 @@ function ResultCard({ passportCountry, res }) {
     } catch (e) { /* fail silently - feedback is best-effort */ }
   }
 
+  async function handleShare() {
+    if (!cardRef.current || sharing) return;
+    setSharing(true);
+    setShareError(false);
+    try {
+      const html2canvas = await loadHtml2Canvas();
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#F6F1E3',
+        scale: 2,
+        // Skip buttons/feedback UI - only capture the actual result visual
+        ignoreElements: (el) => el.classList && el.classList.contains('no-capture'),
+      });
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) { setSharing(false); setShareError(true); return; }
+
+        const safeName = (res.result.destination_label || 'result').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const fileName = `stampcheck-${safeName}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+        const shareText = `${res.result.destination_label} visa check — via StampCheck`;
+
+        const canNativeShare = typeof navigator.share === 'function'
+          && typeof navigator.canShare === 'function'
+          && navigator.canShare({ files: [file] });
+
+        if (canNativeShare) {
+          try {
+            await navigator.share({ files: [file], title: 'StampCheck result', text: shareText });
+          } catch (shareErr) {
+            // AbortError = user closed the share sheet themselves, not a real error
+            if (shareErr && shareErr.name !== 'AbortError') setShareError(true);
+          }
+        } else {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
+        setSharing(false);
+      }, 'image/png');
+    } catch (err) {
+      setSharing(false);
+      setShareError(true);
+    }
+  }
+
   if (!res.found) {
     return <div className="result-card"><p>{res.message}</p></div>;
   }
@@ -89,7 +164,7 @@ function ResultCard({ passportCountry, res }) {
   const verified = !!res.unlockedBy || res.baselineExhaustive;
 
   return (
-    <div className="boarding-pass">
+    <div className="boarding-pass" ref={cardRef}>
       <div className="bp-main">
         <h2>{res.result.destination_label}</h2>
         <div className="bp-grid">
@@ -122,7 +197,7 @@ function ResultCard({ passportCountry, res }) {
           .filter(Boolean)
           .map((msg, i) => <p key={i} className="warning-line">⚠ {msg}</p>)}
 
-        <div className="feedback-row">
+        <div className="feedback-row no-capture">
           <span>Was this accurate?</span>
           {voted ? (
             <span className="thanks">Thanks!</span>
@@ -132,6 +207,13 @@ function ResultCard({ passportCountry, res }) {
               <button onClick={() => sendVote('down')}>👎</button>
             </>
           )}
+        </div>
+
+        <div className="share-row no-capture">
+          <button className="share-btn" onClick={handleShare} disabled={sharing}>
+            {sharing ? 'Preparing…' : '📤 Share result'}
+          </button>
+          {shareError && <span className="share-error">Couldn&apos;t share — try again</span>}
         </div>
       </div>
       <div className="bp-stub">
@@ -454,6 +536,10 @@ export default function Home() {
         .feedback-row { margin-top:14px; display:flex; align-items:center; gap:8px; font-size:11.5px; color:#7A7259; }
         .feedback-row button { padding:3px 9px; cursor:pointer; border:1px solid var(--line); background:var(--paper); border-radius:4px; }
         .feedback-row .thanks { color:var(--verified); }
+        .share-row { margin-top:10px; display:flex; align-items:center; gap:10px; }
+        .share-btn { padding:7px 14px; cursor:pointer; border:1px solid var(--brass); background:var(--paper); color:var(--ink); border-radius:4px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; }
+        .share-btn:disabled { opacity:.6; cursor:default; }
+        .share-error { font-size:11px; color:var(--stamp-red); }
 
         .bp-stub { background:var(--ink); color:var(--paper); padding:20px 16px; display:flex; flex-direction:column; justify-content:space-between; position:relative; }
         .perf { position:absolute; left:0; top:12px; bottom:12px; border-left:2px dashed #4A5A78; }
